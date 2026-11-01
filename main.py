@@ -40,6 +40,10 @@ def check_bucket_access(bucket_name):
             and leftover_key (the test object key left behind if cleanup
             failed, otherwise None).
     """
+    # No region is set anywhere, so the client uses whatever the SDK
+    # resolves from the environment. For a bucket living elsewhere the
+    # first answer is often a redirect error, which the handlers below
+    # file under unknown rather than allowed or denied.
     s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
     results = {'listing': False, 'writing': False, 'listing_status': 'unknown', 'writing_status': 'unknown', 'exists': None, 'leftover_key': None}
 
@@ -54,6 +58,9 @@ def check_bucket_access(bucket_name):
     except ClientError as e:
         code = e.response.get('Error', {}).get('Code', '')
         if code == 'AccessDenied':
+            # Exists here is an inference, not a fact: S3 also answers
+            # 403 for names that are not yours to know about, which is
+            # the same response a private bucket that does exist gives.
             results['listing_status'] = 'access_denied'
             results['exists'] = True
             logging.info(f"Bucket {bucket_name} does not allow public listing.")
@@ -142,6 +149,10 @@ def main():
     if results.get('leftover_key'):
         print(f"Leftover test object: {results['leftover_key']} (cleanup failed, this object was left behind in the bucket)")
 
+    # Only a bucket that does not exist exits non zero. A bucket that
+    # is wide open for public writing, the worst result this tool can
+    # find, still exits 0, so a script must read the printed lines and
+    # cannot gate on the exit code.
     if results.get('exists') is False:
         sys.exit(1)
 
