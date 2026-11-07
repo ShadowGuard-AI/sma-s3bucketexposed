@@ -26,8 +26,11 @@ def is_valid_bucket_name(bucket_name):
     return (
         3 <= len(bucket_name) <= 63
         and all(c in allowed for c in bucket_name)
-        and not bucket_name.startswith('-')
-        and not bucket_name.endswith('-')
+        and bucket_name[0] in "abcdefghijklmnopqrstuvwxyz0123456789"
+        and bucket_name[-1] in "abcdefghijklmnopqrstuvwxyz0123456789"
+        and ".." not in bucket_name
+        and ".-" not in bucket_name
+        and "-." not in bucket_name
     )
 
 def check_bucket_access(bucket_name):
@@ -136,7 +139,7 @@ def main():
     bucket_name = args.bucket_name
 
     if not is_valid_bucket_name(bucket_name):
-        logging.error("Invalid S3 bucket name format. Bucket names must be between 3 and 63 characters long, can contain only lowercase letters, numbers, dots (.), and hyphens (-), and must not start or end with a hyphen.")
+        logging.error("Invalid S3 bucket name format. Bucket names must be between 3 and 63 characters long, can contain only lowercase letters, numbers, dots (.), and hyphens (-), must begin and end with a lowercase letter or number, and must not contain adjacent dots or a dot next to a hyphen.")
         sys.exit(1)
 
     logging.warning("Write probe warning: this check writes a test object into the bucket and then deletes it. If cleanup fails, the test object is left behind in the bucket.")
